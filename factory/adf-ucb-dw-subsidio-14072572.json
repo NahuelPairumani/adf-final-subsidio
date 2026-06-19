@@ -1,0 +1,10 @@
+{
+	"name": "adf-ucb-dw-subsidio-14072572",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "brazilsouth"
+}
