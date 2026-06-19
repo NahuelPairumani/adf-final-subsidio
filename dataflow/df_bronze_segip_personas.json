@@ -1,0 +1,119 @@
+{
+	"name": "df_bronze_segip_personas",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "segip_personas_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_segip_personas",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          ci as string,",
+				"          nombres as string,",
+				"          apellido_paterno as string,",
+				"          apellido_materno as string,",
+				"          fecha_nacimiento as string,",
+				"          genero as string,",
+				"          estado_civil as string,",
+				"          ci_conyuge as string,",
+				"          numero_hijos as string,",
+				"          ci_padre as string,",
+				"          ci_madre as string,",
+				"          profesion as string,",
+				"          nivel_estudios as string,",
+				"          municipio_residencia as string,",
+				"          fecha_emision as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(ci) && trim(toString(ci)) != '' && !isNull(fecha_nacimiento) && upper(trim(toString(fecha_nacimiento))) != 'NULL' && toInteger(substring(toString(fecha_nacimiento), 1, 4)) >= (year(currentDate()) - 200)) ~> filter1",
+				"filter1 derive(ci = upper(regexReplace(trim(toString(ci)), '[\\\\s-]', '')),",
+				"          nombres = iif(upper(trim(toString(nombres)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(nombres)), '\\\\s+', ' '))),",
+				"          apellido_paterno = iif(upper(trim(toString(apellido_paterno)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(apellido_paterno)), '\\\\s+', ' '))),",
+				"          apellido_materno = iif(upper(trim(toString(apellido_materno)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(apellido_materno)), '\\\\s+', ' '))),",
+				"          fecha_nacimiento = coalesce(     toDate(toString(fecha_nacimiento), 'yyyy-MM-dd'),     toDate(toString(fecha_nacimiento), 'dd-MM-yyyy'),     toDate(toString(fecha_nacimiento), 'MM/dd/yyyy') ),",
+				"          genero = iif(upper(trim(toString(genero)))=='NULL', toString(null()), upper(trim(toString(genero)))),",
+				"          estado_civil = iif(upper(trim(toString(estado_civil)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(estado_civil)), '\\\\s+', ' '))),",
+				"          ci_conyuge = iif(upper(trim(toString(ci_conyuge)))=='NULL', toString(null()), upper(regexReplace(trim(toString(ci_conyuge)), '[\\\\s-]', ''))),",
+				"          numero_hijos = toInteger(iif(upper(trim(toString(numero_hijos)))=='NULL' || isNull(numero_hijos), '0', trim(toString(numero_hijos)))),",
+				"          ci_padre = iif(upper(trim(toString(ci_padre)))=='NULL', toString(null()), upper(regexReplace(trim(toString(ci_padre)), '[\\\\s-]', ''))),",
+				"          ci_madre = iif(upper(trim(toString(ci_madre)))=='NULL', toString(null()), upper(regexReplace(trim(toString(ci_madre)), '[\\\\s-]', ''))),",
+				"          profesion = iif(upper(trim(toString(profesion)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(profesion)), '\\\\s+', ' '))),",
+				"          nivel_estudios = iif(upper(trim(toString(nivel_estudios)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(nivel_estudios)), '\\\\s+', ' '))),",
+				"          municipio_residencia = iif(upper(trim(toString(municipio_residencia)))=='NULL', toString(null()), initCap(regexReplace(trim(toString(municipio_residencia)), '\\\\s+', ' '))),",
+				"          fecha_emision = coalesce(     toDate(toString(fecha_emision), 'yyyy-MM-dd'),     toDate(toString(fecha_emision), 'dd-MM-yyyy'),     toDate(toString(fecha_emision), 'MM/dd/yyyy') )) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          ci as string,",
+				"          nombres as string,",
+				"          apellido_paterno as string,",
+				"          apellido_materno as string,",
+				"          fecha_nacimiento as date,",
+				"          genero as string,",
+				"          estado_civil as string,",
+				"          ci_conyuge as string,",
+				"          numero_hijos as integer,",
+				"          ci_padre as string,",
+				"          ci_madre as string,",
+				"          profesion as string,",
+				"          nivel_estudios as string,",
+				"          municipio_residencia as string,",
+				"          fecha_emision as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          ci,",
+				"          nombres,",
+				"          apellido_paterno,",
+				"          apellido_materno,",
+				"          fecha_nacimiento,",
+				"          genero,",
+				"          estado_civil,",
+				"          ci_conyuge,",
+				"          numero_hijos,",
+				"          ci_padre,",
+				"          ci_madre,",
+				"          profesion,",
+				"          nivel_estudios,",
+				"          municipio_residencia,",
+				"          fecha_emision",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

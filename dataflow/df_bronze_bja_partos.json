@@ -1,0 +1,91 @@
+{
+	"name": "df_bronze_bja_partos",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "bja_partos_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_bja_partos",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          parto_id as string,",
+				"          ci_madre as string,",
+				"          ci_recien_nacido as string,",
+				"          establecimiento_id as string,",
+				"          fecha_parto as string,",
+				"          tipo_parto as string,",
+				"          peso_nacimiento_kg as string,",
+				"          talla_nacimiento_cm as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(parto_id) && trim(toString(parto_id)) != '' && !isNull(ci_madre) && trim(toString(ci_madre)) != '') ~> filter1",
+				"filter1 derive(parto_id = toInteger(trim(toString(parto_id))),",
+				"          ci_madre = upper(regexReplace(trim(toString(ci_madre)), '[\\\\s-]', '')),",
+				"          ci_recien_nacido = upper(regexReplace(trim(toString(ci_recien_nacido)), '[\\\\s-]', '')),",
+				"          establecimiento_id = toInteger(trim(toString(establecimiento_id))),",
+				"          fecha_parto = coalesce(     toDate(toString(fecha_parto), 'yyyy-MM-dd'),     toDate(toString(fecha_parto), 'dd-MM-yyyy'),     toDate(toString(fecha_parto), 'MM/dd/yyyy'),     toDate(toString(fecha_parto), 'dd/MM/yyyy') ),",
+				"          tipo_parto = case(     in(['natural','nattural','naturl'], lower(regexReplace(trim(toString(tipo_parto)),'\\\\s+',''))), 'Natural',     in(['cesárea','cessárea','cesárae','cesarea'], lower(regexReplace(trim(toString(tipo_parto)),'\\\\s+',''))), 'Cesárea',     iif(upper(trim(toString(tipo_parto)))=='NULL', toString(null()), initCap(trim(toString(tipo_parto)))) ),",
+				"          peso_nacimiento_kg = toDecimal(iif(upper(trim(toString(peso_nacimiento_kg)))=='NULL' || isNull(peso_nacimiento_kg) || toFloat(regexReplace(trim(toString(peso_nacimiento_kg)),'[^0-9.]','')) > 10.0, '0.0', regexReplace(trim(toString(peso_nacimiento_kg)),'[^0-9.]','')), 10, 2),",
+				"          talla_nacimiento_cm = toDecimal(iif(upper(trim(toString(talla_nacimiento_cm)))=='NULL' || isNull(talla_nacimiento_cm) || toFloat(regexReplace(trim(toString(talla_nacimiento_cm)),'[^0-9.]','')) > 80.0, '0.0', regexReplace(trim(toString(talla_nacimiento_cm)),'[^0-9.]','')), 10, 2)) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          parto_id as integer,",
+				"          ci_madre as string,",
+				"          ci_recien_nacido as string,",
+				"          establecimiento_id as integer,",
+				"          fecha_parto as date,",
+				"          tipo_parto as string,",
+				"          peso_nacimiento_kg as decimal(10,2),",
+				"          talla_nacimiento_cm as decimal(10,2)",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          parto_id,",
+				"          ci_madre,",
+				"          ci_recien_nacido,",
+				"          establecimiento_id,",
+				"          fecha_parto,",
+				"          tipo_parto,",
+				"          peso_nacimiento_kg,",
+				"          talla_nacimiento_cm",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

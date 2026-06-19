@@ -1,0 +1,91 @@
+{
+	"name": "df_bronze_bja_pagos",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "bja_pagos_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_bja_pagos",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          pago_id as string,",
+				"          ci_beneficiaria as string,",
+				"          concepto_pago as string,",
+				"          monto_bs as string,",
+				"          fecha_pago as string,",
+				"          estado_pago as string,",
+				"          canal_pago as string,",
+				"          nro_comprobante as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(pago_id) && trim(toString(pago_id)) != '' && !isNull(ci_beneficiaria) && trim(toString(ci_beneficiaria)) != '') ~> filter1",
+				"filter1 derive(pago_id = toInteger(trim(toString(pago_id))),",
+				"          ci_beneficiaria = upper(regexReplace(trim(toString(ci_beneficiaria)), '[\\\\s-]', '')),",
+				"          concepto_pago = case(     in(['control rpenatal 1'], lower(regexReplace(trim(concepto_pago),'\\\\s+',' '))), 'Control Prenatal 1',     in(['parto istitucional'], lower(regexReplace(trim(concepto_pago),'\\\\s+',' '))), 'Parto Institucional',     initCap(lower(regexReplace(trim(concepto_pago),'\\\\s+',' '))) ),",
+				"          monto_bs = toDecimal(iif(upper(trim(toString(monto_bs)))=='NULL' || isNull(monto_bs), '0.0', regexReplace(trim(toString(monto_bs)),'[^0-9.]','')), 10, 2),",
+				"          fecha_pago = coalesce(     toDate(toString(fecha_pago), 'yyyy-MM-dd'),     toDate(toString(fecha_pago), 'dd/MM/yyyy'),     toDate(toString(fecha_pago), 'MM/dd/yyyy') ),",
+				"          estado_pago = initCap(lower(trim(toString(estado_pago)))),",
+				"          canal_pago = case(     in(['banco unión', 'banco unin', 'banco union'], lower(regexReplace(trim(canal_pago),'\\\\s+',' '))), 'Banco Unión',     iif(upper(trim(toString(canal_pago)))=='NULL', toString(null()), initCap(lower(regexReplace(trim(canal_pago),'\\\\s+',' ')))) ),",
+				"          nro_comprobante = iif(upper(trim(toString(nro_comprobante)))=='NULL', toString(null()), trim(toString(nro_comprobante)))) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          pago_id as integer,",
+				"          ci_beneficiaria as string,",
+				"          concepto_pago as string,",
+				"          monto_bs as decimal(10,2),",
+				"          fecha_pago as date,",
+				"          estado_pago as string,",
+				"          canal_pago as string,",
+				"          nro_comprobante as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          pago_id,",
+				"          ci_beneficiaria,",
+				"          concepto_pago,",
+				"          monto_bs,",
+				"          fecha_pago,",
+				"          estado_pago,",
+				"          canal_pago,",
+				"          nro_comprobante",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

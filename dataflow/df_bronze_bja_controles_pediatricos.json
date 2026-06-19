@@ -1,0 +1,99 @@
+{
+	"name": "df_bronze_bja_controles_pediatricos",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "bja_controles_pediatricos_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_bja_controles_pediatricos",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "filter1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          control_pediatrico_id as string,",
+				"          ci_nino as string,",
+				"          ci_madre as string,",
+				"          establecimiento_id as string,",
+				"          nro_control as string,",
+				"          fecha_control as string,",
+				"          peso_nino_kg as string,",
+				"          talla_nino_cm as string,",
+				"          vacuna_aplicada as string,",
+				"          resultado as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"filter1 derive(control_pediatrico_id = toInteger(trim(control_pediatrico_id)),",
+				"          ci_nino = upper(regexReplace(trim(ci_nino), '[\\\\s-]', '')),",
+				"          ci_madre = upper(regexReplace(trim(ci_madre), '[\\\\s-]', '')),",
+				"          establecimiento_id = toInteger(trim(establecimiento_id)),",
+				"          nro_control = toInteger(trim(establecimiento_id)),",
+				"          peso_nino_kg = toDecimal(iif(upper(trim(peso_nino_kg))=='NULL' || isNull(peso_nino_kg), '0.0', regexReplace(trim(peso_nino_kg),'[^0-9.]','')), 10, 2),",
+				"          fecha_control = coalesce(     toDate(fecha_control, 'yyyy-MM-dd'),     toDate(fecha_control, 'dd-MM-yyyy'),     toDate(fecha_control, 'dd/MM/yyyy') ),",
+				"          talla_nino_cm = toDecimal(iif(upper(trim(talla_nino_cm))=='NULL' || isNull(talla_nino_cm) || toFloat(regexReplace(trim(talla_nino_cm),'[^0-9.]','')) > 150.0, '0.0', regexReplace(trim(talla_nino_cm),'[^0-9.]','')), 10, 2),",
+				"          vacuna_aplicada = iif(upper(trim(vacuna_aplicada))=='NULL', toString(null()), initCap(regexReplace(trim(vacuna_aplicada),'\\\\s+',' '))),",
+				"          resultado = case(     in(['normal','nrmal','nomral','norrmal'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Normal',     in(['bajopeso'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Bajo Peso',     in(['desnutriciónleve','desnutriicónleve','desnutricionleve'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Desnutrición Leve',     iif(upper(trim(resultado))=='NULL', toString(null()), initCap(regexReplace(trim(resultado),'\\\\s+',' '))) )) ~> derivedColumn1",
+				"source1 filter(!isNull(ci_nino) && trim(ci_nino) != '' && !isNull(ci_madre) && trim(ci_madre) != '' && !isNull(fecha_control) && upper(trim(fecha_control)) != 'NULL' && !isNull(vacuna_aplicada)) ~> filter1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          control_pediatrico_id as integer,",
+				"          ci_nino as string,",
+				"          ci_madre as string,",
+				"          establecimiento_id as integer,",
+				"          nro_control as integer,",
+				"          fecha_control as date,",
+				"          peso_nino_kg as decimal(10,2),",
+				"          talla_nino_cm as decimal(10,2),",
+				"          vacuna_aplicada as string,",
+				"          resultado as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          control_pediatrico_id,",
+				"          ci_nino,",
+				"          ci_madre,",
+				"          establecimiento_id,",
+				"          nro_control,",
+				"          fecha_control,",
+				"          peso_nino_kg,",
+				"          talla_nino_cm,",
+				"          vacuna_aplicada,",
+				"          resultado",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

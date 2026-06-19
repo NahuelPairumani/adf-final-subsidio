@@ -1,0 +1,95 @@
+{
+	"name": "df_bronze_bja_controles_prenatales",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "bja_controles_prenatales_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_bja_controles_prenatales",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          control_prenatal_id as string,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as string,",
+				"          nro_control as string,",
+				"          fecha_control as string,",
+				"          semana_gestacion as string,",
+				"          peso_madre_kg as string,",
+				"          presion_arterial as string,",
+				"          resultado as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(ci_beneficiaria) && trim(ci_beneficiaria) != '' && !isNull(fecha_control) && upper(trim(fecha_control)) != 'NULL') ~> filter1",
+				"filter1 derive(control_prenatal_id = toInteger(trim(control_prenatal_id)),",
+				"          ci_beneficiaria = upper(regexReplace(trim(ci_beneficiaria), '[\\\\s-]', '')),",
+				"          establecimiento_id = toInteger(trim(establecimiento_id)),",
+				"          nro_control = toInteger(trim(nro_control)),",
+				"          fecha_control = coalesce(     toDate(fecha_control, 'yyyy-MM-dd'),     toDate(fecha_control, 'MM/dd/yyyy'),     toDate(fecha_control, 'dd-MM-yyyy'),     toDate(fecha_control, 'dd/MM/yyyy') ),",
+				"          semana_gestacion = toInteger(iif(upper(trim(semana_gestacion))=='NULL', toString(null()), trim(semana_gestacion))),",
+				"          peso_madre_kg = toDecimal(iif(upper(trim(peso_madre_kg))=='NULL' || isNull(peso_madre_kg), '0.0', regexReplace(trim(peso_madre_kg),'[^0-9.]','')), 10, 2),",
+				"          presion_arterial = iif(upper(trim(presion_arterial))=='NULL', toString(null()), regexReplace(trim(presion_arterial),'\\\\s+','')),",
+				"          resultado = case(     in(['normal','nrmal','noraml','nomral'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Normal',     in(['riesgobajo','riesgoobajo'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Riesgo Bajo',     in(['riesgomoderado'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Riesgo Moderado',     in(['riesgoalto','riesgooalto'], lower(regexReplace(trim(resultado),'\\\\s+',''))), 'Riesgo Alto',     iif(upper(trim(resultado))=='NULL', toString(null()), initCap(regexReplace(trim(resultado),'\\\\s+',' '))) )) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          control_prenatal_id as integer,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as integer,",
+				"          nro_control as integer,",
+				"          fecha_control as date,",
+				"          semana_gestacion as integer,",
+				"          peso_madre_kg as decimal(10,2),",
+				"          presion_arterial as string,",
+				"          resultado as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          control_prenatal_id,",
+				"          ci_beneficiaria,",
+				"          establecimiento_id,",
+				"          nro_control,",
+				"          fecha_control,",
+				"          semana_gestacion,",
+				"          peso_madre_kg,",
+				"          presion_arterial,",
+				"          resultado",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

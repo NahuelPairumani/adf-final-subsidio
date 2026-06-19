@@ -1,0 +1,83 @@
+{
+	"name": "df_bronze_bja_inscripciones",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "bja_inscripciones_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_bja_inscripciones",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          inscripcion_id as string,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as string,",
+				"          fecha_inscripcion as string,",
+				"          semana_gestacion as string,",
+				"          estado as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(ci_beneficiaria) && trim(toString(ci_beneficiaria)) != '' && !isNull(fecha_inscripcion) && upper(trim(toString(fecha_inscripcion))) != 'NULL') ~> filter1",
+				"filter1 derive(inscripcion_id = toInteger(trim(toString(inscripcion_id))),",
+				"          ci_beneficiaria = upper(regexReplace(trim(toString(ci_beneficiaria)), '[\\\\s-]', '')),",
+				"          establecimiento_id = toInteger(trim(toString(establecimiento_id))),",
+				"          fecha_inscripcion = coalesce(     toDate(toString(fecha_inscripcion), 'yyyy-MM-dd'),     toDate(toString(fecha_inscripcion), 'dd-MM-yyyy'),     toDate(toString(fecha_inscripcion), 'dd/MM/yyyy'),     toDate(toString(fecha_inscripcion), 'MM/dd/yyyy') ),",
+				"          semana_gestacion = toInteger(iif(upper(trim(toString(semana_gestacion)))=='NULL', toString(null()), trim(toString(semana_gestacion)))),",
+				"          estado = initCap(regexReplace(trim(toString(estado)), '\\\\s+', ' '))) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          inscripcion_id as integer,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as integer,",
+				"          fecha_inscripcion as date,",
+				"          semana_gestacion as integer,",
+				"          estado as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          inscripcion_id,",
+				"          ci_beneficiaria,",
+				"          establecimiento_id,",
+				"          fecha_inscripcion,",
+				"          semana_gestacion,",
+				"          estado",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
