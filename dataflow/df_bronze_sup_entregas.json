@@ -1,0 +1,99 @@
+{
+	"name": "df_bronze_sup_entregas",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "sup_entregas_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_sup_entregas",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          entrega_id as string,",
+				"          boleta_id as string,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as string,",
+				"          paquete_id as string,",
+				"          paquete_nombre as string,",
+				"          fecha_entrega as string,",
+				"          lote_produccion as string,",
+				"          peso_paquete_kg as string,",
+				"          fecha_proxima_entrega as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(entrega_id) && trim(toString(entrega_id)) != '' && !isNull(boleta_id) && trim(toString(boleta_id)) != '' && !isNull(ci_beneficiaria) && trim(toString(ci_beneficiaria)) != '') ~> filter1",
+				"filter1 derive(entrega_id = toInteger(trim(toString(entrega_id))),",
+				"          boleta_id = toInteger(trim(toString(boleta_id))),",
+				"          ci_beneficiaria = upper(regexReplace(trim(toString(ci_beneficiaria)), '[\\\\s-]', '')),",
+				"          establecimiento_id = toInteger(trim(toString(establecimiento_id))),",
+				"          paquete_id = toInteger(trim(toString(paquete_id))),",
+				"          paquete_nombre = initCap(regexReplace(trim(toString(paquete_nombre)), '\\\\s+', ' ')),",
+				"          fecha_entrega = coalesce(     toDate(toString(fecha_entrega), 'yyyy-MM-dd'),     toDate(toString(fecha_entrega), 'dd-MM-yyyy'),     toDate(toString(fecha_entrega), 'MM/dd/yyyy'),     toDate(toString(fecha_entrega), 'dd/MM/yyyy') ),",
+				"          lote_produccion = iif(upper(trim(toString(lote_produccion)))=='NULL', toString(null()), regexReplace(trim(toString(lote_produccion)), '\\\\s+', ' ')),",
+				"          peso_paquete_kg = toDecimal(iif(upper(trim(toString(peso_paquete_kg)))=='NULL' || isNull(peso_paquete_kg), '0.0', regexReplace(trim(toString(peso_paquete_kg)),'[^0-9.]','')), 10, 2),",
+				"          fecha_proxima_entrega = iif(upper(trim(toString(fecha_proxima_entrega)))=='NULL', toDate(null()),     coalesce(         toDate(toString(fecha_proxima_entrega), 'yyyy-MM-dd'),         toDate(toString(fecha_proxima_entrega), 'dd-MM-yyyy'),         toDate(toString(fecha_proxima_entrega), 'MM/dd/yyyy'),         toDate(toString(fecha_proxima_entrega), 'dd/MM/yyyy')     ) )) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          entrega_id as integer,",
+				"          boleta_id as integer,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as integer,",
+				"          paquete_id as integer,",
+				"          paquete_nombre as string,",
+				"          fecha_entrega as date,",
+				"          lote_produccion as string,",
+				"          peso_paquete_kg as decimal(10,2),",
+				"          fecha_proxima_entrega as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          entrega_id,",
+				"          boleta_id,",
+				"          ci_beneficiaria,",
+				"          establecimiento_id,",
+				"          paquete_id,",
+				"          paquete_nombre,",
+				"          fecha_entrega,",
+				"          lote_produccion,",
+				"          peso_paquete_kg,",
+				"          fecha_proxima_entrega",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

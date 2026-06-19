@@ -1,0 +1,95 @@
+{
+	"name": "df_bronze_sup_establecimientos",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "sup_establecimientos_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_sup_establecimientos",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          establecimiento_id as string,",
+				"          codigo_snis as string,",
+				"          nombre as string,",
+				"          tipo as string,",
+				"          nivel_atencion as string,",
+				"          municipio as string,",
+				"          departamento as string,",
+				"          red_salud as string,",
+				"          estado as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(establecimiento_id) && trim(toString(establecimiento_id)) != '' && !isNull(codigo_snis) && trim(toString(codigo_snis)) != '') ~> filter1",
+				"filter1 derive(establecimiento_id = toInteger(trim(toString(establecimiento_id))),",
+				"          codigo_snis = upper(regexReplace(trim(toString(codigo_snis)), '\\\\s+', ' ')),",
+				"          nombre = regexReplace(trim(toString(nombre)), '\\\\s+', ' '),",
+				"          tipo = regexReplace(trim(toString(tipo)), '\\\\s+', ' '),",
+				"          nivel_atencion = regexReplace(trim(toString(nivel_atencion)), '\\\\s+', ' '),",
+				"          municipio = regexReplace(trim(toString(nivel_atencion)), '\\\\s+', ' '),",
+				"          departamento = case(     in(['SCZ','Santa Cruz','Sta Cruz','santa cruz','SANTA CRUZ','Sta. Cruz','SC'], trim(toString(departamento))), 'Santa Cruz',     in(['LPZ','La Paz','la paz','LA PAZ','L.P.','z', 'lapaz','LP'], trim(toString(departamento))), 'La Paz',     in(['CBBA','Cochabamba','cochabamba','COCHABAMBA','CBB','CB'], trim(toString(departamento))), 'Cochabamba',     in(['ORU','Oruro','oruro','ORURO','OR'], trim(toString(departamento))), 'Oruro',     in(['PTS','Potosi','potosi','POTOSI','Potosí','potosí','PT'], trim(toString(departamento))), 'Potosí',     in(['TJA','Tarija','tarija','TARIJA','TJ'], trim(toString(departamento))), 'Tarija',     in(['CHQ','Chuquisaca','chuquisaca','CHUQUISACA','Sucre','sucre','SUC','CH'], trim(toString(departamento))), 'Chuquisaca',     in(['BEN','Beni','beni','BENI','BN'], trim(toString(departamento))), 'Beni',     in(['PND','Pando','pando','PANDO','PN'], trim(toString(departamento))), 'Pando',      regexReplace(trim(toString(departamento)), '\\\\s+', ' ') ),",
+				"          red_salud = regexReplace(trim(toString(red_salud)), '\\\\s+', ' '),",
+				"          estado = initCap(regexReplace(trim(toString(estado)), '\\\\s+', ' '))) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          establecimiento_id as integer,",
+				"          codigo_snis as string,",
+				"          nombre as string,",
+				"          tipo as string,",
+				"          nivel_atencion as string,",
+				"          municipio as string,",
+				"          departamento as string,",
+				"          red_salud as string,",
+				"          estado as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          establecimiento_id,",
+				"          codigo_snis,",
+				"          nombre,",
+				"          tipo,",
+				"          nivel_atencion,",
+				"          municipio,",
+				"          departamento,",
+				"          red_salud,",
+				"          estado",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

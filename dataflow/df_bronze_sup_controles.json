@@ -1,0 +1,91 @@
+{
+	"name": "df_bronze_sup_controles",
+	"properties": {
+		"folder": {
+			"name": "bronze"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "sup_controles_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "silver_sup_controles",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          control_id as string,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as string,",
+				"          nro_control as string,",
+				"          fecha_control as string,",
+				"          semana_gestacion as string,",
+				"          peso_madre_kg as string,",
+				"          presion_arterial as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 filter(!isNull(control_id) && trim(toString(control_id)) != '' && !isNull(ci_beneficiaria) && trim(toString(ci_beneficiaria)) != '') ~> filter1",
+				"filter1 derive(control_id = toInteger(trim(toString(control_id))),",
+				"          ci_beneficiaria = upper(regexReplace(trim(toString(ci_beneficiaria)), '[\\\\s-]', '')),",
+				"          establecimiento_id = toInteger(trim(toString(establecimiento_id))),",
+				"          nro_control = toInteger(trim(toString(nro_control))),",
+				"          fecha_control = coalesce(     toDate(toString(fecha_control), 'yyyy-MM-dd'),     toDate(toString(fecha_control), 'dd-MM-yyyy'),     toDate(toString(fecha_control), 'MM/dd/yyyy'),     toDate(toString(fecha_control), 'dd/MM/yyyy') ),",
+				"          semana_gestacion = toInteger(iif(upper(trim(toString(semana_gestacion)))=='NULL', toString(null()), trim(toString(semana_gestacion)))),",
+				"          peso_madre_kg = toDecimal(iif(upper(trim(toString(peso_madre_kg)))=='NULL' || isNull(peso_madre_kg) || toFloat(regexReplace(trim(toString(peso_madre_kg)),'[^0-9.]','')) > 250.0, '0.0', regexReplace(trim(toString(peso_madre_kg)),'[^0-9.]','')), 10, 2),",
+				"          presion_arterial = iif(upper(trim(toString(presion_arterial)))=='NULL', toString(null()), regexReplace(trim(toString(presion_arterial)), '\\\\s+', ''))) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          control_id as integer,",
+				"          ci_beneficiaria as string,",
+				"          establecimiento_id as integer,",
+				"          nro_control as integer,",
+				"          fecha_control as date,",
+				"          semana_gestacion as integer,",
+				"          peso_madre_kg as decimal(10,2),",
+				"          presion_arterial as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          control_id,",
+				"          ci_beneficiaria,",
+				"          establecimiento_id,",
+				"          nro_control,",
+				"          fecha_control,",
+				"          semana_gestacion,",
+				"          peso_madre_kg,",
+				"          presion_arterial",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
