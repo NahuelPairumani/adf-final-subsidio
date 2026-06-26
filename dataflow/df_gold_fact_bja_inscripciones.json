@@ -13,6 +13,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "gold_dim_persona",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
 				}
 			],
 			"sinks": [
@@ -30,6 +37,9 @@
 				},
 				{
 					"name": "select1"
+				},
+				{
+					"name": "exists1"
 				}
 			],
 			"scriptLines": [
@@ -45,7 +55,21 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
-				"source1 derive(fecha_key = toInteger(toString(fecha_inscripcion, 'yyyyMMdd'))) ~> derivedColumn1",
+				"source(output(",
+				"          ci as string,",
+				"          nombres as string,",
+				"          apellido_paterno as string,",
+				"          apellido_materno as string,",
+				"          genero as string,",
+				"          estado_civil as string,",
+				"          nivel_estudios as string,",
+				"          municipio_residencia as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source2",
+				"source1 derive(fecha_key = year(fecha_inscripcion) * 10000 + month(fecha_inscripcion) * 100 + dayOfMonth(fecha_inscripcion)) ~> derivedColumn1",
 				"derivedColumn1 select(mapColumn(",
 				"          inscripcion_id,",
 				"          ci = ci_beneficiaria,",
@@ -56,7 +80,10 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select1",
-				"select1 sink(allowSchemaDrift: true,",
+				"select1, source2 exists(select1@ci == source2@ci,",
+				"     negate:false,",
+				"     broadcast: 'auto')~> exists1",
+				"exists1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          inscripcion_id as integer,",
