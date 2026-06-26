@@ -20,13 +20,6 @@
 						"type": "DatasetReference"
 					},
 					"name": "source2"
-				},
-				{
-					"dataset": {
-						"referenceName": "gold_dim_tiempo",
-						"type": "DatasetReference"
-					},
-					"name": "source3"
 				}
 			],
 			"sinks": [
@@ -47,9 +40,6 @@
 				},
 				{
 					"name": "exists1"
-				},
-				{
-					"name": "exists2"
 				}
 			],
 			"scriptLines": [
@@ -81,18 +71,6 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source2",
-				"source(output(",
-				"          fecha_key as integer,",
-				"          fecha as date,",
-				"          anio as integer,",
-				"          mes as integer,",
-				"          nombre_mes as string,",
-				"          dia as integer",
-				"     ),",
-				"     allowSchemaDrift: true,",
-				"     validateSchema: false,",
-				"     isolationLevel: 'READ_UNCOMMITTED',",
-				"     format: 'table') ~> source3",
 				"source1 derive(fecha_key = year(fecha_parto) * 10000 + month(fecha_parto) * 100 + dayOfMonth(fecha_parto)) ~> derivedColumn1",
 				"derivedColumn1 select(mapColumn(",
 				"          parto_id,",
@@ -109,10 +87,7 @@
 				"select1, source2 exists(select1@ci == source2@ci,",
 				"     negate:false,",
 				"     broadcast: 'auto')~> exists1",
-				"exists1, source3 exists(select1@fecha_key == source3@fecha_key,",
-				"     negate:false,",
-				"     broadcast: 'auto')~> exists2",
-				"exists2 sink(allowSchemaDrift: true,",
+				"exists1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          parto_id as integer,",
